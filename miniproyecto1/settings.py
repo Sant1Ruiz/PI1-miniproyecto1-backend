@@ -61,7 +61,7 @@ REST_FRAMEWORK = {
 
 # Configuración de drf-spectacular
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Tasks API',
+    'TITLE': 'Activivalles API',
     'DESCRIPTION': 'API para gestión de tareas',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
@@ -181,5 +181,15 @@ else:
     CORS_ALLOWED_ORIGINS = [
         origin.strip()
         for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+        if origin.strip()
+    ]
+
+
+if DEBUG:
+    ALLOWED_HOSTS = ["localhost"]
+else:
+    ALLOWED_HOSTS=[
+        origin.strip()
+        for origin in os.getenv("ALLOWED_HOSTS", "").split(",")
         if origin.strip()
     ]
