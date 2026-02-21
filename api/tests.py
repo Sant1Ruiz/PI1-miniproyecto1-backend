@@ -73,8 +73,8 @@ class UserViewSetTestCase(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(response.data['success'])
-        self.assertEqual(response.data['error']['type'], 'integrity_error')
-        self.assertIn('email', response.data['error']['message'].lower())
+        self.assertEqual(response.data['error']['type'], 'validation_error')
+        self.assertIn('email', response.data['error']['errors'][0]['message'].lower())
     
     def test_create_user_missing_fields(self):
         """Test: Error al crear usuario sin campos requeridos"""
