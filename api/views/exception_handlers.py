@@ -1,7 +1,6 @@
 from rest_framework.views import exception_handler
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework import status as http_status
-from django.core.exceptions import ObjectDoesNotExist
 from api.views.helpers import (
     normalize_error_response,
     handle_validation_error
