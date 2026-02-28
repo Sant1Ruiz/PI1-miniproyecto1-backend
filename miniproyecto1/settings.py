@@ -118,7 +118,6 @@ DATABASES = {
         'CONN_MAX_AGE': 300,
         'CONN_HEALTH_CHECKS': True,
         
-        # ← AGREGAR ESTO para tests
         'TEST': {
             'NAME': 'test_postgres',
         },

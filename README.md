@@ -10,7 +10,6 @@ API REST para gestión de usuarios y actividades construida con Django REST Fram
 - ✅ Formato de respuesta normalizado
 - ✅ Documentación automática con Swagger/OpenAPI
 - ✅ Manejo de errores centralizado
-- ✅ Suite completa de tests (50+)
 
 ## Tecnologías
 
