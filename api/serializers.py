@@ -53,7 +53,7 @@ class ActivitySerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
-# ========== SERIALIZERS PARA RESPUESTAS (NUEVOS) ==========
+# ========== SERIALIZERS PARA RESPUESTAS ==========
 
 class MetaSerializer(serializers.Serializer):
     """Metadata incluida en todas las respuestas"""
