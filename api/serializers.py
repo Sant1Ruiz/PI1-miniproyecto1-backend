@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import User, Activity
-
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 # ========== SERIALIZERS DE MODELOS ==========
 
@@ -50,7 +51,12 @@ class ActivitySerializer(serializers.ModelSerializer):
             'status_id', 'status_display',
             'due_date', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = [
+            'id',
+            'user',
+            'created_at',
+            'updated_at',
+        ]
 
 
 # ========== SERIALIZERS PARA RESPUESTAS ==========
@@ -126,3 +132,32 @@ class ErrorResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField(default=False, help_text="Siempre false para errores")
     error = ErrorDetailSerializer(help_text="Detalles del error")
     meta = MetaSerializer(help_text="Metadata de la respuesta")
+
+
+class RegisterSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, style={'input_type': 'password'})
+
+    def validate_email(self, value):
+        email = value.strip().lower()
+
+        if User.objects.filter(email=email).exists():
+            raise serializers.ValidationError("Ya existe un usuario con este email")
+
+        return email
+
+    def validate_password(self, value):
+        try:
+            validate_password(value)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(list(e.messages))
+
+        return value
+
+    def create(self, validated_data):
+        return User.objects.create_user(
+            email=validated_data["email"],
+            name=validated_data["name"],
+            password=validated_data["password"],
+        )
