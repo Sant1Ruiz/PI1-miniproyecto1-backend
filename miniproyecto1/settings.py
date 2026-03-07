@@ -46,17 +46,20 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'api',
     "corsheaders",
+    "rest_framework.authtoken",
 
 ]
 
 # Configuración de REST Framework
 REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    # 'PAGE_SIZE': 10,
-
-    'EXCEPTION_HANDLER': 'api.views.exception_handlers.custom_exception_handler',
-
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "api.views.exception_handlers.custom_exception_handler",
 }
 
 # Configuración de drf-spectacular
@@ -185,7 +188,7 @@ else:
 
 
 if DEBUG:
-    ALLOWED_HOSTS = ["localhost"]
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 else:
     ALLOWED_HOSTS=[
         origin.strip()

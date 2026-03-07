@@ -90,6 +90,12 @@ class Activity(models.Model):
         default=Status.PENDIENTE
     )
     due_date = models.DateTimeField(null=True, blank=True)
+    duration = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
