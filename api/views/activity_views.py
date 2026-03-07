@@ -1,12 +1,14 @@
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from typing import cast
+from rest_framework.request import Request
 from django.db import IntegrityError
 from drf_spectacular.utils import (
     extend_schema, 
     OpenApiResponse,
 )
-
 from api.views.helpers import (
     success_response,
     handle_not_found,
@@ -27,24 +29,26 @@ class ActivityViewSet(ModelViewSet):
     """ViewSet para gestionar actividades."""
     queryset = Activity.objects.select_related('user', 'parent').all()
     serializer_class = ActivitySerializer
+    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        """Retorna el queryset con filtros opcionales aplicados."""
-        queryset = super().get_queryset()
-        
-        user_id = self.request.query_params.get('user')
-        if user_id:
-            queryset = queryset.filter(user_id=user_id)
-        
-        status_id = self.request.query_params.get('status_id')
+    
+        request = cast(Request, self.request)
+
+        queryset = Activity.objects.select_related('user', 'parent').filter(user=request.user)
+
+        status_id = request.query_params.get('status_id')
         if status_id:
             queryset = queryset.filter(status_id=status_id)
-        
-        priority_id = self.request.query_params.get('priority_id')
+
+        priority_id = request.query_params.get('priority_id')
         if priority_id:
             queryset = queryset.filter(priority_id=priority_id)
-        
+
         return queryset
+    
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
     
     def list(self, request, *args, **kwargs):
         """Lista todas las actividades con paginación y filtros opcionales."""
@@ -163,7 +167,7 @@ class ActivityViewSet(ModelViewSet):
         """Obtiene todas las sub-tareas de una actividad."""
         try:
             activity = self.get_object()
-            subtasks = activity.subtasks.select_related('user').all()
+            subtasks = activity.subtasks.select_related('user').filter(user=request.user)
             serializer = self.get_serializer(subtasks, many=True)
             
             return success_response(

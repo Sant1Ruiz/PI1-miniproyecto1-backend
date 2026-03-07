@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import User, Activity
-
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 # ========== SERIALIZERS DE MODELOS ==========
 
@@ -48,17 +49,70 @@ class ActivitySerializer(serializers.ModelSerializer):
             'title', 'description',
             'priority_id', 'priority_display',
             'status_id', 'status_display',
-            'due_date', 'created_at', 'updated_at'
+            'due_date', 'duration', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = [
+            'id',
+            'user',
+            'created_at',
+            'updated_at',
+        ]
+class LoginRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, style={'input_type': 'password'})
 
 
-# ========== SERIALIZERS PARA RESPUESTAS ==========
+class LoginUserDataSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    email = serializers.EmailField()
+
+
+class RegisterUserDataSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    email = serializers.EmailField()
+    name = serializers.CharField()
+
+
+class LoginResponseDataSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    user = LoginUserDataSerializer()
+
+
+class RegisterResponseDataSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    user = RegisterUserDataSerializer()
+
+
+class MeDataSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    email = serializers.EmailField()
 
 class MetaSerializer(serializers.Serializer):
     """Metadata incluida en todas las respuestas"""
     timestamp = serializers.DateTimeField(help_text="Timestamp ISO 8601 de la respuesta")
     status_code = serializers.IntegerField(help_text="Código HTTP de estado")
+class LoginSuccessResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField(default=True)
+    data = LoginResponseDataSerializer()
+    message = serializers.CharField(required=False)
+    meta = MetaSerializer()
+
+
+class RegisterSuccessResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField(default=True)
+    data = RegisterResponseDataSerializer()
+    message = serializers.CharField(required=False)
+    meta = MetaSerializer()
+
+
+class MeSuccessResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField(default=True)
+    data = MeDataSerializer()
+    meta = MetaSerializer()
+
+# ========== SERIALIZERS PARA RESPUESTAS ==========
+
+
 
 
 class SuccessResponseSerializer(serializers.Serializer):
@@ -126,3 +180,32 @@ class ErrorResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField(default=False, help_text="Siempre false para errores")
     error = ErrorDetailSerializer(help_text="Detalles del error")
     meta = MetaSerializer(help_text="Metadata de la respuesta")
+
+
+class RegisterSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, style={'input_type': 'password'})
+
+    def validate_email(self, value):
+        email = value.strip().lower()
+
+        if User.objects.filter(email=email).exists():
+            raise serializers.ValidationError("Ya existe un usuario con este email")
+
+        return email
+
+    def validate_password(self, value):
+        try:
+            validate_password(value)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(list(e.messages))
+
+        return value
+
+    def create(self, validated_data):
+        return User.objects.create_user(
+            email=validated_data["email"],
+            name=validated_data["name"],
+            password=validated_data["password"],
+        )
