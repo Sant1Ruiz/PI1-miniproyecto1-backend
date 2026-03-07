@@ -49,7 +49,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             'title', 'description',
             'priority_id', 'priority_display',
             'status_id', 'status_display',
-            'due_date', 'created_at', 'updated_at'
+            'due_date', 'duration', 'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id',
