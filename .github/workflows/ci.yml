@@ -35,11 +35,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Lint with ruff
+        run: ruff check .
+
       - name: Run migrations
         run: python manage.py migrate --noinput
 
-      - name: Run tests
-        run: python manage.py test api --verbosity=2 --keepdb
+      - name: Run tests with coverage
+        run: coverage run --source='.' manage.py test api --verbosity=2 --keepdb
+
+      - name: Coverage report
+        run: coverage report --fail-under=0
 
       - name: Check for pending migrations
         run: python manage.py migrate --check
