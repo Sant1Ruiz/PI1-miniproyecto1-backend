@@ -39,7 +39,7 @@ jobs:
         run: python manage.py migrate --noinput
 
       - name: Run tests
-        run: python manage.py test api --verbosity=2
+        run: python manage.py test api --verbosity=2 --keepdb
 
       - name: Check for pending migrations
         run: python manage.py migrate --check
