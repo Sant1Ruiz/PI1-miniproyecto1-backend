@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DJANGO_SETTINGS_MODULE: miniproyecto1.settings.test
+      DJANGO_SETTINGS_MODULE: miniproyecto1.settings
       SECRET_KEY: django-insecure-ficji0om
       DEBUG: "False"
       DB_NAME: ${{ secrets.DB_NAME }}
