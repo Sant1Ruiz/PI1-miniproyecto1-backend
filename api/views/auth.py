@@ -1,8 +1,14 @@
 from django.contrib.auth import authenticate
+from django.db import IntegrityError
+
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
+
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+
 from api.serializers import (
     RegisterSerializer,
     LoginRequestSerializer,
@@ -12,12 +18,11 @@ from api.serializers import (
     DeleteSuccessResponseSerializer,
     ErrorResponseSerializer,
 )
-from api.views.helpers import success_response, handle_authentication_error, handle_validation_error, handle_integrity_error
-from api.views.helpers import success_response, handle_authentication_error
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from django.db import IntegrityError
-from drf_spectacular.utils import extend_schema, OpenApiResponse
-
+from api.views.helpers import (
+    success_response,
+    handle_validation_error,
+    handle_integrity_error,
+)
 class RegisterView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -66,25 +71,31 @@ class RegisterView(APIView):
 class LoginView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
+
     @extend_schema(
-    summary="Iniciar sesión",
-    description="Autentica un usuario con email y contraseña y devuelve token.",
-    request=LoginRequestSerializer,
-    responses={
-        200: OpenApiResponse(
-            response=LoginSuccessResponseSerializer,
-            description="Inicio de sesión exitoso"
-        ),
-        401: OpenApiResponse(
-            response=ErrorResponseSerializer,
-            description="Credenciales inválidas"
-        ),
-    },
-    tags=["auth"],
-)
+        summary="Iniciar sesión",
+        description="Autentica un usuario con email y contraseña y devuelve token.",
+        request=LoginRequestSerializer,
+        responses={
+            200: OpenApiResponse(
+                response=LoginSuccessResponseSerializer,
+                description="Inicio de sesión exitoso"
+            ),
+            400: OpenApiResponse(
+                response=ErrorResponseSerializer,
+                description="Credenciales inválidas o campos faltantes"
+            ),
+        },
+        tags=["auth"],
+    )
     def post(self, request):
-        email = request.data.get("email", "").strip()
-        password = request.data.get("password", "")
+        serializer = LoginRequestSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return handle_validation_error(serializer.errors)
+
+        email = serializer.validated_data["email"].strip()
+        password = serializer.validated_data["password"]
 
         user = authenticate(
             request=request,
@@ -93,7 +104,17 @@ class LoginView(APIView):
         )
 
         if not user:
-            return handle_authentication_error("Credenciales inválidas")
+            return Response(
+                {
+                    "success": False,
+                    "data": None,
+                    "message": "Credenciales inválidas",
+                    "meta": {
+                        "status_code": status.HTTP_400_BAD_REQUEST,
+                    },
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         token, _ = Token.objects.get_or_create(user=user)
 

@@ -59,6 +59,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "api.views.exception_handlers.custom_exception_handler",
 }
 
 # Configuración de drf-spectacular
