@@ -57,14 +57,62 @@ class ActivitySerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
+class LoginRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, style={'input_type': 'password'})
 
 
-# ========== SERIALIZERS PARA RESPUESTAS ==========
+class LoginUserDataSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    email = serializers.EmailField()
+
+
+class RegisterUserDataSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    email = serializers.EmailField()
+    name = serializers.CharField()
+
+
+class LoginResponseDataSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    user = LoginUserDataSerializer()
+
+
+class RegisterResponseDataSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    user = RegisterUserDataSerializer()
+
+
+class MeDataSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    email = serializers.EmailField()
 
 class MetaSerializer(serializers.Serializer):
     """Metadata incluida en todas las respuestas"""
     timestamp = serializers.DateTimeField(help_text="Timestamp ISO 8601 de la respuesta")
     status_code = serializers.IntegerField(help_text="Código HTTP de estado")
+class LoginSuccessResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField(default=True)
+    data = LoginResponseDataSerializer()
+    message = serializers.CharField(required=False)
+    meta = MetaSerializer()
+
+
+class RegisterSuccessResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField(default=True)
+    data = RegisterResponseDataSerializer()
+    message = serializers.CharField(required=False)
+    meta = MetaSerializer()
+
+
+class MeSuccessResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField(default=True)
+    data = MeDataSerializer()
+    meta = MetaSerializer()
+
+# ========== SERIALIZERS PARA RESPUESTAS ==========
+
+
 
 
 class SuccessResponseSerializer(serializers.Serializer):
