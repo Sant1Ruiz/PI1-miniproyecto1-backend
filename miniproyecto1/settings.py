@@ -32,6 +32,7 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = []
 
+DB_DEBUG = os.getenv('DB_DEBUG')
 
 # Application definition
 
@@ -106,29 +107,36 @@ AUTH_USER_MODEL = 'api.User'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': BASE_DIR / 'db.sqlite3',
-    # }
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASS'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
-        'CONN_MAX_AGE': 300,
-        'CONN_HEALTH_CHECKS': True,
-        
-        'TEST': {
-            'NAME': 'test_postgres',
-        },
-        'OPTIONS': {
-            'connect_timeout': 10,
-        },
 
+if DB_DEBUG:
+    DATABASES = {
+
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
+else:
+    DATABASES = {
+
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASS'),
+            'HOST': os.getenv('DB_HOST'),
+            'PORT': os.getenv('DB_PORT'),
+            'CONN_MAX_AGE': 300,
+            'CONN_HEALTH_CHECKS': True,
+            
+            'TEST': {
+                'NAME': 'test_postgres',
+            },
+            'OPTIONS': {
+                'connect_timeout': 10,
+            },
+
+        }
     
 }
 # Cerrar conexiones automáticamente después de cada request en tests
