@@ -403,7 +403,7 @@ class ActivityViewSetTestCase(APITestCase):
         data = {
             'title': 'Nueva Actividad',
             'description': 'Descripción de la nueva actividad',
-            'priority_id': Activity.Priority.URGENTE,
+            'priority_id': Activity.Priority.ALTA,
             'status_id': Activity.Status.PENDIENTE,
             'due_date': (timezone.now() + timedelta(days=7)).isoformat()
         }
@@ -491,7 +491,7 @@ class ActivityViewSetTestCase(APITestCase):
         data = {
             'title': 'Actividad Actualizada',
             'description': 'Descripción actualizada',
-            'priority_id': Activity.Priority.URGENTE,
+            'priority_id': Activity.Priority.ALTA,
             'status_id': Activity.Status.COMPLETADA
         }
 
