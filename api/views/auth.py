@@ -135,27 +135,52 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-    summary="Usuario autenticado",
-    description="Devuelve la información básica del usuario autenticado.",
-    responses={
-        200: OpenApiResponse(
-            response=MeSuccessResponseSerializer,
-            description="Usuario autenticado"
-        ),
-        401: OpenApiResponse(
-            response=ErrorResponseSerializer,
-            description="No autenticado"
-        ),
-    },
-    tags=["auth"],
-)
+        summary="Usuario autenticado",
+        description="Devuelve la información básica del usuario autenticado y permite actualizar su perfil.",
+        responses={
+            200: OpenApiResponse(
+                response=MeSuccessResponseSerializer,
+                description="Usuario autenticado o actualizado"
+            ),
+            401: OpenApiResponse(
+                response=ErrorResponseSerializer,
+                description="No autenticado"
+            ),
+        },
+        tags=["auth"],
+    )
 
     def get(self, request):
         return success_response(
             data={
                 "id": request.user.pk,
                 "email": request.user.email,
+                "name": request.user.name,
+                "max_horas_day": request.user.max_horas_day,
             },
+            status_code=status.HTTP_200_OK,
+        )
+
+    def patch(self, request):
+        user = request.user
+        name = request.data.get("name")
+        max_horas_day = request.data.get("max_horas_day")
+
+        if name:
+            user.name = name
+        if max_horas_day is not None:
+            user.max_horas_day = int(max_horas_day)
+
+        user.save()
+
+        return success_response(
+            data={
+                "id": user.pk,
+                "email": user.email,
+                "name": user.name,
+                "max_horas_day": user.max_horas_day,
+            },
+            message="Perfil actualizado",
             status_code=status.HTTP_200_OK,
         )
 
