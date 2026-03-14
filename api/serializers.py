@@ -10,7 +10,7 @@ class UserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'name', 'email', 'password', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'email', 'password', 'max_horas_day', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def create(self, validated_data):
@@ -65,12 +65,15 @@ class LoginRequestSerializer(serializers.Serializer):
 class LoginUserDataSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     email = serializers.EmailField()
+    name = serializers.CharField()
+    max_horas_day = serializers.IntegerField()
 
 
 class RegisterUserDataSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     email = serializers.EmailField()
     name = serializers.CharField()
+    max_horas_day = serializers.IntegerField()
 
 
 class LoginResponseDataSerializer(serializers.Serializer):
@@ -86,6 +89,8 @@ class RegisterResponseDataSerializer(serializers.Serializer):
 class MeDataSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     email = serializers.EmailField()
+    name = serializers.CharField()
+    max_horas_day = serializers.IntegerField()
 
 class MetaSerializer(serializers.Serializer):
     """Metadata incluida en todas las respuestas"""

@@ -29,6 +29,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=255)
+    max_horas_day = models.IntegerField(default=6)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

@@ -1,3 +1,5 @@
+from datetime import date
+
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework import status
@@ -5,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from typing import cast
 from rest_framework.request import Request
 from django.db import IntegrityError
+from django.db.models import Sum
 from drf_spectacular.utils import (
     extend_schema, 
     OpenApiResponse,
@@ -176,3 +179,33 @@ class ActivityViewSet(ModelViewSet):
             )
         except Activity.DoesNotExist:
             return handle_not_found('Actividad', pk)
+        
+
+
+    @action(detail=False, methods=['get'], url_path='totalhours')
+    def total_hours(self, request):
+        """Obtiene el total de horas registradas en sub-actividades para una fecha."""
+        
+        request = cast(Request, request)
+
+        query_date = request.query_params.get("date")
+
+        if not query_date:
+            query_date = date.today()
+
+        queryset = Activity.objects.filter(
+            user=request.user,
+            parent__isnull=False,
+            due_date=query_date
+        )
+
+        total = queryset.aggregate(total_hours=Sum("duration"))
+
+        return success_response(
+            data={
+                "date": query_date,
+                "total_hours": total["total_hours"] or 0,
+                "total_subtasks": queryset.count()
+            },
+            message="Resumen de horas del {date} obtenido exitosamente".format(date=query_date)
+        )
