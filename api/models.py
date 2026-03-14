@@ -58,7 +58,6 @@ class Activity(models.Model):
         BAJA = 1, 'Baja'
         MEDIA = 2, 'Media'
         ALTA = 3, 'Alta'
-        URGENTE = 4, 'Urgente'
     
     # Opciones para ENUM status_id
     class Status(models.IntegerChoices):
