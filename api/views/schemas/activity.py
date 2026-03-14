@@ -37,7 +37,7 @@ activity_view_schemas = extend_schema_view(
                 name='priority_id',
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
-                description='Filtrar por prioridad (1=Baja, 2=Media, 3=Alta, 4=Urgente)',
+                description='Filtrar por prioridad (1=Baja, 2=Media, 3=Alta)',
                 required=False
             ),
         ],
