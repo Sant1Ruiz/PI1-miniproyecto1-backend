@@ -30,7 +30,7 @@ activity_view_schemas = extend_schema_view(
                 name='status_id',
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
-                description='Filtrar por estado (1=Pendiente, 2=En Progreso, 3=Completada, 4=Cancelada)',
+                description='Filtrar por estado (1=Pendiente, 2=En Progreso, 3=Completada, 4=Cancelada, 5=Pospuesta)',
                 required=False
             ),
             OpenApiParameter(
@@ -50,7 +50,7 @@ activity_view_schemas = extend_schema_view(
     ),
     create=extend_schema(
         summary="Crear actividad",
-        description="Crea una nueva actividad asociada a un usuario",
+        description="Crea una nueva actividad asociada a un usuario. Si se crea con estado Pospuesta (status_id=5), es obligatorio enviar el campo 'postpone_description'.",
         request=ActivitySerializer,
         responses={
             201: OpenApiResponse(
@@ -79,7 +79,7 @@ activity_view_schemas = extend_schema_view(
     ),
     update=extend_schema(
         summary="Actualizar actividad",
-        description="Actualiza todos los campos de una actividad (PUT). Requiere todos los campos.",
+        description="Actualiza todos los campos de una actividad (PUT). Requiere todos los campos. Si el estado cambia a Pospuesta (5), se debe incluir 'postpone_description' para generar una nueva nota en el historial.",
         request=ActivitySerializer,
         responses={
             200: OpenApiResponse(
@@ -98,7 +98,7 @@ activity_view_schemas = extend_schema_view(
     ),
     partial_update=extend_schema(
         summary="Actualizar parcialmente actividad",
-        description="Actualiza solo los campos proporcionados de una actividad (PATCH)",
+        description="Actualiza solo los campos proporcionados de una actividad (PATCH). Si el estado cambia a Pospuesta (5), se debe incluir 'postpone_description' para generar una nueva nota en el historial.",
         request=ActivitySerializer,
         responses={
             200: OpenApiResponse(
