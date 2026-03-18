@@ -34,12 +34,16 @@ class ActivityViewSet(ModelViewSet):
     serializer_class = ActivitySerializer
     permission_classes = [IsAuthenticated]
     
+    queryset = Activity.objects.select_related('user', 'parent').prefetch_related('notes').all()
+
     def get_queryset(self):
     
         request = cast(Request, self.request)
 
-        queryset = Activity.objects.select_related('user', 'parent').filter(user=request.user)
-
+        queryset = Activity.objects.select_related(
+            'user', 'parent'
+        ).prefetch_related('notes').filter(user=request.user)
+        
         status_id = request.query_params.get('status_id')
         if status_id:
             queryset = queryset.filter(status_id=status_id)
@@ -63,7 +67,7 @@ class ActivityViewSet(ModelViewSet):
             return self.get_paginated_response(serializer.data)
         
         serializer = self.get_serializer(queryset, many=True)
-        return success_response(data=serializer.data)
+        return success_response(data=serializer.data) 
     
     def create(self, request, *args, **kwargs):
         """Crea una nueva actividad."""
