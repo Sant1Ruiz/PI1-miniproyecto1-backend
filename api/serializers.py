@@ -46,7 +46,7 @@ class ActivitySerializer(serializers.ModelSerializer):
     priority_display = serializers.CharField(source='get_priority_id_display', read_only=True)
     status_display = serializers.CharField(source='get_status_id_display', read_only=True)
     parent_title = serializers.CharField(source='parent.title', read_only=True, allow_null=True)
-    postpone_reason = serializers.CharField(write_only=True, required=False)
+    reason = serializers.CharField(write_only=True, required=False)
     notes = ActivityNoteSerializer(many=True, read_only=True)
     
     class Meta:
@@ -58,7 +58,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             'priority_id', 'priority_display',
             'status_id', 'status_display',
             'due_date', 'duration', 'created_at', 'updated_at', 
-            'postpone_reason', 'notes'
+            'reason', 'notes'
         ]
         read_only_fields = [
             'id',
@@ -70,39 +70,28 @@ class ActivitySerializer(serializers.ModelSerializer):
     def validate(self, data):
         # 1. Identificamos el estado actual (si existe) y el estado entrante
         current_status = getattr(self.instance, 'status_id', None) if self.instance else None
-        parent_id = getattr(self.instance, 'parent_id',None)
         new_status = data.get('status_id', current_status)
         
-        print(parent_id)
         is_changing_to_postponed = (new_status == Activity.Status.POSPUESTA) and (current_status != Activity.Status.POSPUESTA)
         is_already_postponed = (current_status == Activity.Status.POSPUESTA) and (new_status == Activity.Status.POSPUESTA)
 
         #
         if is_changing_to_postponed:
-            if not parent_id:
-                raise serializers.ValidationError({
-                    "NoSubtask": "Las actividades padre no pueden contener notas"
-                })
-            if not data.get('postpone_reason'):
-                raise serializers.ValidationError({
-                    "postpone_reason": "Debe proporcionar una razón al posponer la actividad."
-                })
-                
-        
+            pass
         elif is_already_postponed:
-            if 'postpone_reason' in data:
+            if 'reason' in data:
                 raise serializers.ValidationError({
                     "status_id": "La actividad ya está pospuesta. Debes cambiarla de estado antes de posponerla de nuevo."
                 })
             
-        elif 'postpone_reason' in data:
-            data.pop('postpone_reason')
+        elif 'reason' in data:
+            data.pop('reason')
 
         return data
 
     
     def update(self, instance, validated_data):
-        reason = validated_data.pop('postpone_reason', None)
+        reason = validated_data.pop('reason', None)
         
         instance = super().update(instance, validated_data)
 

@@ -11,7 +11,9 @@ from api.serializers import (
     ActivitySuccessResponseSerializer,
     ActivityListSuccessResponseSerializer,
     DeleteSuccessResponseSerializer,
-    ErrorResponseSerializer
+    ErrorResponseSerializer,
+    ActivityNoteSerializer,
+    SuccessResponseSerializer
 )
 
 activity_view_schemas = extend_schema_view(
@@ -129,4 +131,23 @@ activity_view_schemas = extend_schema_view(
             ),
         }
     ),
+    update_note=extend_schema(
+        summary="Actualizar nota de una actividad",
+        description="Permite actualizar el contenido (reason) de una nota asociada a una actividad pospuesta. No elimina ni crea notas, solo modifica una existente.",
+        request=ActivityNoteSerializer,
+        responses={
+            200: OpenApiResponse(
+                response=SuccessResponseSerializer,
+                description="Nota actualizada exitosamente"
+            ),
+            400: OpenApiResponse(
+                response=ErrorResponseSerializer,
+                description="Error de validación"
+            ),
+            404: OpenApiResponse(
+                response=ErrorResponseSerializer,
+                description="Actividad o nota no encontrada"
+            ),
+        }
+    )   
 )
