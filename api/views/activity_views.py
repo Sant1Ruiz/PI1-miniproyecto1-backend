@@ -18,11 +18,12 @@ from api.views.helpers import (
     handle_validation_error,
     handle_integrity_error
 )
-from api.models import Activity
+from api.models import Activity, ActivityNote
 from api.serializers import (
     ActivitySerializer,
     ActivityListSuccessResponseSerializer,
-    ErrorResponseSerializer
+    ErrorResponseSerializer,
+    ActivityNoteSerializer
 )
 
 from api.views.schemas.activity import activity_view_schemas
@@ -109,12 +110,16 @@ class ActivityViewSet(ModelViewSet):
         
         try:
             self.perform_update(serializer)
+            instance.refresh_from_db()
+            serializer = self.get_serializer(instance)
+
             return success_response(
                 data=serializer.data,
                 message="Actividad actualizada exitosamente"
             )
         except IntegrityError as e:
             return handle_integrity_error(e)
+
     
     def partial_update(self, request, *args, **kwargs):
         """Actualiza parcialmente una actividad (PATCH)."""
@@ -130,6 +135,10 @@ class ActivityViewSet(ModelViewSet):
         
         try:
             self.perform_update(serializer)
+
+            instance.refresh_from_db()
+            serializer = self.get_serializer(instance)
+
             return success_response(
                 data=serializer.data,
                 message="Actividad actualizada exitosamente"
@@ -212,4 +221,36 @@ class ActivityViewSet(ModelViewSet):
                 "total_subtasks": queryset.count()
             },
             message="Resumen de horas del {date} obtenido exitosamente".format(date=query_date)
+        )
+    
+
+    @action(detail=True, methods=['patch'], url_path='notes/(?P<note_id>[^/.]+)')
+    def update_note(self, request, pk=None, note_id=None):
+        """
+        Actualiza una nota específica de una actividad
+        """
+        try:
+            activity = self.get_object()
+        except Activity.DoesNotExist:
+            return handle_not_found('Actividad', pk)
+
+        try:
+            note = activity.notes.get(id=note_id)
+        except ActivityNote.DoesNotExist:
+            return handle_not_found('Nota', note_id)
+
+        serializer = ActivityNoteSerializer(
+            note,
+            data=request.data,
+            partial=True
+        )
+
+        if not serializer.is_valid():
+            return handle_validation_error(serializer.errors)
+
+        serializer.save()
+
+        return success_response(
+            data=serializer.data,
+            message="Nota actualizada exitosamente"
         )
