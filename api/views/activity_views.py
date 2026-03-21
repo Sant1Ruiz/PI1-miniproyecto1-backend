@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from typing import cast
 from rest_framework.request import Request
 from django.db import IntegrityError
-from django.db.models import Sum
+from django.db.models import Sum, Count, Q
 from drf_spectacular.utils import (
     extend_schema, 
     OpenApiResponse,
@@ -253,4 +253,54 @@ class ActivityViewSet(ModelViewSet):
         return success_response(
             data=serializer.data,
             message="Nota actualizada exitosamente"
+        )
+    
+    @action(detail=False, methods=['get'], url_path='progress')
+    def progress(self, request):
+        """Obtiene el resumen de progreso de actividades del usuario"""
+
+        queryset = Activity.objects.filter(user=request.user, parent__isnull=True)
+
+        data = queryset.aggregate(
+            total=Count('id'),
+            pending=Count('id', filter=Q(status_id=Activity.Status.PENDIENTE)),
+            completed=Count('id', filter=Q(status_id=Activity.Status.COMPLETADA)),
+            postponed=Count('id', filter=Q(status_id=Activity.Status.POSPUESTA)),
+        )
+        total = data["total"] or 1
+        data["completed_percentage"] = round((data["completed"] / total) * 100, 2)
+        return success_response(
+            data=data,
+            message="Resumen de progreso obtenido exitosamente"
+        )
+    
+    @action(detail=True, methods=['get'], url_path='progress')
+    def progress_by_activity(self, request, pk=None):
+        """Obtiene el progreso basado en las subtareas de una actividad padre"""
+
+        try:
+            activity = self.get_object()
+        except Activity.DoesNotExist:
+            return handle_not_found('Actividad', pk)
+
+        if activity.parent is not None:
+            return handle_validation_error({
+                "activity": "Solo se puede calcular el progreso para actividades padre"
+            })
+
+        subtasks = activity.subtasks.all()
+
+        data = subtasks.aggregate(
+            total=Count('id'),
+            pending=Count('id', filter=Q(status_id=Activity.Status.PENDIENTE)),
+            completed=Count('id', filter=Q(status_id=Activity.Status.COMPLETADA)),
+            postponed=Count('id', filter=Q(status_id=Activity.Status.POSPUESTA)),
+        )
+
+        total = data["total"] or 1
+        data["completed_percentage"] = round((data["completed"] / total) * 100, 2)
+
+        return success_response(
+            data=data,
+            message=f"Progreso de la actividad '{activity.title}' obtenido exitosamente"
         )
