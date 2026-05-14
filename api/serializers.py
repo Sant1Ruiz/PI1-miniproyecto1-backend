@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Activity
+from .models import User, Activity, ActivityNote
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 
@@ -33,6 +33,12 @@ class UserSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+class ActivityNoteSerializer(serializers.ModelSerializer):
+    """Serializador para mostrar el historial de razones por las que se pospuso"""
+    class Meta:
+        model = ActivityNote
+        fields = ['id', 'reason', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 class ActivitySerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source='user.email', read_only=True)
@@ -40,16 +46,20 @@ class ActivitySerializer(serializers.ModelSerializer):
     priority_display = serializers.CharField(source='get_priority_id_display', read_only=True)
     status_display = serializers.CharField(source='get_status_id_display', read_only=True)
     parent_title = serializers.CharField(source='parent.title', read_only=True, allow_null=True)
+    parent_due_date = serializers.DateTimeField(source='parent.due_date', read_only=True, allow_null=True)
+    reason = serializers.CharField(write_only=True, required=False)
+    notes = ActivityNoteSerializer(many=True, read_only=True)
     
     class Meta:
         model = Activity
         fields = [
             'id', 'user', 'user_email', 'user_name',
-            'parent', 'parent_title',
+            'parent', 'parent_title', 'parent_due_date',
             'title', 'description',
             'priority_id', 'priority_display',
             'status_id', 'status_display',
-            'due_date', 'duration', 'created_at', 'updated_at'
+            'due_date', 'duration', 'created_at', 'updated_at', 
+            'reason', 'notes'
         ]
         read_only_fields = [
             'id',
@@ -57,6 +67,43 @@ class ActivitySerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
+
+    def validate(self, data):
+        # 1. Identificamos el estado actual (si existe) y el estado entrante
+        current_status = getattr(self.instance, 'status_id', None) if self.instance else None
+        new_status = data.get('status_id', current_status)
+        
+        is_changing_to_postponed = (new_status == Activity.Status.POSPUESTA) and (current_status != Activity.Status.POSPUESTA)
+        is_already_postponed = (current_status == Activity.Status.POSPUESTA) and (new_status == Activity.Status.POSPUESTA)
+
+        #
+        if is_changing_to_postponed:
+            pass
+        elif is_already_postponed:
+            if 'reason' in data:
+                raise serializers.ValidationError({
+                    "status_id": "La actividad ya está pospuesta. Debes cambiarla de estado antes de posponerla de nuevo."
+                })
+            
+        elif 'reason' in data:
+            data.pop('reason')
+
+        return data
+
+    
+    def update(self, instance, validated_data):
+        reason = validated_data.pop('reason', None)
+        
+        instance = super().update(instance, validated_data)
+
+        if instance.status_id == Activity.Status.POSPUESTA and reason:
+            ActivityNote.objects.create(
+                activity=instance,
+                reason=reason
+            )
+
+        return instance
+    
 class LoginRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, style={'input_type': 'password'})

@@ -66,6 +66,7 @@ class Activity(models.Model):
         EN_PROGRESO = 2, 'En Progreso'
         COMPLETADA = 3, 'Completada'
         CANCELADA = 4, 'Cancelada'
+        POSPUESTA = 5, 'Pospuesta'
     
     user = models.ForeignKey(
         User,
@@ -107,3 +108,15 @@ class Activity(models.Model):
     
     def __str__(self):
         return f"{self.title} - {self.user.email}"
+    
+class ActivityNote(models.Model):
+    activity = models.ForeignKey(
+        Activity, 
+        on_delete=models.CASCADE, 
+        related_name='notes'
+    )
+    reason = models.TextField(verbose_name='Razón/Motivo')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Nota de {self.activity.title} - {self.created_at.strftime('%Y-%m-%d')}"

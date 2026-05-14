@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from typing import cast
 from rest_framework.request import Request
 from django.db import IntegrityError
-from django.db.models import Sum
+from django.db.models import Sum, Count, Q
 from drf_spectacular.utils import (
     extend_schema, 
     OpenApiResponse,
@@ -18,11 +18,12 @@ from api.views.helpers import (
     handle_validation_error,
     handle_integrity_error
 )
-from api.models import Activity
+from api.models import Activity, ActivityNote
 from api.serializers import (
     ActivitySerializer,
     ActivityListSuccessResponseSerializer,
-    ErrorResponseSerializer
+    ErrorResponseSerializer,
+    ActivityNoteSerializer
 )
 
 from api.views.schemas.activity import activity_view_schemas
@@ -34,12 +35,16 @@ class ActivityViewSet(ModelViewSet):
     serializer_class = ActivitySerializer
     permission_classes = [IsAuthenticated]
     
+    queryset = Activity.objects.select_related('user', 'parent').prefetch_related('notes').all()
+
     def get_queryset(self):
     
         request = cast(Request, self.request)
 
-        queryset = Activity.objects.select_related('user', 'parent').filter(user=request.user)
-
+        queryset = Activity.objects.select_related(
+            'user', 'parent'
+        ).prefetch_related('notes').filter(user=request.user)
+        
         status_id = request.query_params.get('status_id')
         if status_id:
             queryset = queryset.filter(status_id=status_id)
@@ -47,6 +52,12 @@ class ActivityViewSet(ModelViewSet):
         priority_id = request.query_params.get('priority_id')
         if priority_id:
             queryset = queryset.filter(priority_id=priority_id)
+
+        has_parent = request.query_params.get('has_parent')
+        if has_parent == 'true':
+            queryset = queryset.filter(parent__isnull=False)
+        elif has_parent == 'false':
+            queryset = queryset.filter(parent__isnull=True)
 
         return queryset
     
@@ -63,7 +74,7 @@ class ActivityViewSet(ModelViewSet):
             return self.get_paginated_response(serializer.data)
         
         serializer = self.get_serializer(queryset, many=True)
-        return success_response(data=serializer.data)
+        return success_response(data=serializer.data) 
     
     def create(self, request, *args, **kwargs):
         """Crea una nueva actividad."""
@@ -105,12 +116,16 @@ class ActivityViewSet(ModelViewSet):
         
         try:
             self.perform_update(serializer)
+            instance.refresh_from_db()
+            serializer = self.get_serializer(instance)
+
             return success_response(
                 data=serializer.data,
                 message="Actividad actualizada exitosamente"
             )
         except IntegrityError as e:
             return handle_integrity_error(e)
+
     
     def partial_update(self, request, *args, **kwargs):
         """Actualiza parcialmente una actividad (PATCH)."""
@@ -126,6 +141,10 @@ class ActivityViewSet(ModelViewSet):
         
         try:
             self.perform_update(serializer)
+
+            instance.refresh_from_db()
+            serializer = self.get_serializer(instance)
+
             return success_response(
                 data=serializer.data,
                 message="Actividad actualizada exitosamente"
@@ -197,7 +216,7 @@ class ActivityViewSet(ModelViewSet):
             user=request.user,
             parent__isnull=False,
             due_date=query_date
-        )
+        ).exclude(status_id=Activity.Status.COMPLETADA)
 
         total = queryset.aggregate(total_hours=Sum("duration"))
 
@@ -208,4 +227,86 @@ class ActivityViewSet(ModelViewSet):
                 "total_subtasks": queryset.count()
             },
             message="Resumen de horas del {date} obtenido exitosamente".format(date=query_date)
+        )
+    
+
+    @action(detail=True, methods=['patch'], url_path='notes/(?P<note_id>[^/.]+)')
+    def update_note(self, request, pk=None, note_id=None):
+        """
+        Actualiza una nota específica de una actividad
+        """
+        try:
+            activity = self.get_object()
+        except Activity.DoesNotExist:
+            return handle_not_found('Actividad', pk)
+
+        try:
+            note = activity.notes.get(id=note_id)
+        except ActivityNote.DoesNotExist:
+            return handle_not_found('Nota', note_id)
+
+        serializer = ActivityNoteSerializer(
+            note,
+            data=request.data,
+            partial=True
+        )
+
+        if not serializer.is_valid():
+            return handle_validation_error(serializer.errors)
+
+        serializer.save()
+
+        return success_response(
+            data=serializer.data,
+            message="Nota actualizada exitosamente"
+        )
+    
+    @action(detail=False, methods=['get'], url_path='progress')
+    def progress(self, request):
+        """Obtiene el resumen de progreso de actividades del usuario"""
+
+        queryset = Activity.objects.filter(user=request.user, parent__isnull=True)
+
+        data = queryset.aggregate(
+            total=Count('id'),
+            pending=Count('id', filter=Q(status_id=Activity.Status.PENDIENTE)),
+            completed=Count('id', filter=Q(status_id=Activity.Status.COMPLETADA)),
+            postponed=Count('id', filter=Q(status_id=Activity.Status.POSPUESTA)),
+        )
+        total = data["total"] or 1
+        data["completed_percentage"] = round((data["completed"] / total) * 100, 2)
+        return success_response(
+            data=data,
+            message="Resumen de progreso obtenido exitosamente"
+        )
+    
+    @action(detail=True, methods=['get'], url_path='progress')
+    def progress_by_activity(self, request, pk=None):
+        """Obtiene el progreso basado en las subtareas de una actividad padre"""
+
+        try:
+            activity = self.get_object()
+        except Activity.DoesNotExist:
+            return handle_not_found('Actividad', pk)
+
+        if activity.parent is not None:
+            return handle_validation_error({
+                "activity": "Solo se puede calcular el progreso para actividades padre"
+            })
+
+        subtasks = activity.subtasks.all()
+
+        data = subtasks.aggregate(
+            total=Count('id'),
+            pending=Count('id', filter=Q(status_id=Activity.Status.PENDIENTE)),
+            completed=Count('id', filter=Q(status_id=Activity.Status.COMPLETADA)),
+            postponed=Count('id', filter=Q(status_id=Activity.Status.POSPUESTA)),
+        )
+
+        total = data["total"] or 1
+        data["completed_percentage"] = round((data["completed"] / total) * 100, 2)
+
+        return success_response(
+            data=data,
+            message=f"Progreso de la actividad '{activity.title}' obtenido exitosamente"
         )

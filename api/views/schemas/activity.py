@@ -11,7 +11,9 @@ from api.serializers import (
     ActivitySuccessResponseSerializer,
     ActivityListSuccessResponseSerializer,
     DeleteSuccessResponseSerializer,
-    ErrorResponseSerializer
+    ErrorResponseSerializer,
+    ActivityNoteSerializer,
+    SuccessResponseSerializer
 )
 
 activity_view_schemas = extend_schema_view(
@@ -30,7 +32,7 @@ activity_view_schemas = extend_schema_view(
                 name='status_id',
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
-                description='Filtrar por estado (1=Pendiente, 2=En Progreso, 3=Completada, 4=Cancelada)',
+                description='Filtrar por estado (1=Pendiente, 2=En Progreso, 3=Completada, 4=Cancelada, 5=Pospuesta)',
                 required=False
             ),
             OpenApiParameter(
@@ -50,7 +52,7 @@ activity_view_schemas = extend_schema_view(
     ),
     create=extend_schema(
         summary="Crear actividad",
-        description="Crea una nueva actividad asociada a un usuario",
+        description="Crea una nueva actividad asociada a un usuario. Si se crea con estado Pospuesta (status_id=5), es obligatorio enviar el campo 'postpone_description'.",
         request=ActivitySerializer,
         responses={
             201: OpenApiResponse(
@@ -79,7 +81,7 @@ activity_view_schemas = extend_schema_view(
     ),
     update=extend_schema(
         summary="Actualizar actividad",
-        description="Actualiza todos los campos de una actividad (PUT). Requiere todos los campos.",
+        description="Actualiza todos los campos de una actividad (PUT). Requiere todos los campos. Si el estado cambia a Pospuesta (5), se debe incluir 'postpone_description' para generar una nueva nota en el historial.",
         request=ActivitySerializer,
         responses={
             200: OpenApiResponse(
@@ -98,7 +100,7 @@ activity_view_schemas = extend_schema_view(
     ),
     partial_update=extend_schema(
         summary="Actualizar parcialmente actividad",
-        description="Actualiza solo los campos proporcionados de una actividad (PATCH)",
+        description="Actualiza solo los campos proporcionados de una actividad (PATCH). Si el estado cambia a Pospuesta (5), se debe incluir 'postpone_description' para generar una nueva nota en el historial.",
         request=ActivitySerializer,
         responses={
             200: OpenApiResponse(
@@ -129,4 +131,23 @@ activity_view_schemas = extend_schema_view(
             ),
         }
     ),
+    update_note=extend_schema(
+        summary="Actualizar nota de una actividad",
+        description="Permite actualizar el contenido (reason) de una nota asociada a una actividad pospuesta. No elimina ni crea notas, solo modifica una existente.",
+        request=ActivityNoteSerializer,
+        responses={
+            200: OpenApiResponse(
+                response=SuccessResponseSerializer,
+                description="Nota actualizada exitosamente"
+            ),
+            400: OpenApiResponse(
+                response=ErrorResponseSerializer,
+                description="Error de validación"
+            ),
+            404: OpenApiResponse(
+                response=ErrorResponseSerializer,
+                description="Actividad o nota no encontrada"
+            ),
+        }
+    )   
 )
