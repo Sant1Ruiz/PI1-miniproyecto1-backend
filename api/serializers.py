@@ -47,7 +47,7 @@ class ActivitySerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_id_display', read_only=True)
     parent_title = serializers.CharField(source='parent.title', read_only=True, allow_null=True)
     parent_due_date = serializers.DateTimeField(source='parent.due_date', read_only=True, allow_null=True)
-    reason = serializers.CharField(write_only=True, required=False)
+    reason = serializers.CharField(write_only=True, required=False, allow_blank=True)
     notes = ActivityNoteSerializer(many=True, read_only=True)
     
     class Meta:
@@ -93,7 +93,10 @@ class ActivitySerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         reason = validated_data.pop('reason', None)
-        
+
+        old_priority = instance.priority_id
+        new_priority = validated_data.get('priority_id', old_priority)
+
         instance = super().update(instance, validated_data)
 
         if instance.status_id == Activity.Status.POSPUESTA and reason:
@@ -101,6 +104,9 @@ class ActivitySerializer(serializers.ModelSerializer):
                 activity=instance,
                 reason=reason
             )
+
+        if instance.parent is None and new_priority != old_priority:
+            instance.subtasks.update(priority_id=new_priority)
 
         return instance
     
