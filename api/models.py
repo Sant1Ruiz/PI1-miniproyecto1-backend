@@ -81,7 +81,7 @@ class Activity(models.Model):
         related_name='subtasks'
     )
     title = models.CharField(max_length=255)
-    description = models.TextField()
+    description = models.TextField(blank=True, default='')
     priority_id = models.IntegerField(
         choices=Priority.choices,
         default=Priority.MEDIA
