@@ -53,6 +53,12 @@ class ActivityViewSet(ModelViewSet):
         if priority_id:
             queryset = queryset.filter(priority_id=priority_id)
 
+        has_parent = request.query_params.get('has_parent')
+        if has_parent == 'true':
+            queryset = queryset.filter(parent__isnull=False)
+        elif has_parent == 'false':
+            queryset = queryset.filter(parent__isnull=True)
+
         return queryset
     
     def perform_create(self, serializer):
@@ -210,7 +216,7 @@ class ActivityViewSet(ModelViewSet):
             user=request.user,
             parent__isnull=False,
             due_date=query_date
-        )
+        ).exclude(status_id=Activity.Status.COMPLETADA)
 
         total = queryset.aggregate(total_hours=Sum("duration"))
 

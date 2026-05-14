@@ -46,6 +46,7 @@ class ActivitySerializer(serializers.ModelSerializer):
     priority_display = serializers.CharField(source='get_priority_id_display', read_only=True)
     status_display = serializers.CharField(source='get_status_id_display', read_only=True)
     parent_title = serializers.CharField(source='parent.title', read_only=True, allow_null=True)
+    parent_due_date = serializers.DateTimeField(source='parent.due_date', read_only=True, allow_null=True)
     reason = serializers.CharField(write_only=True, required=False)
     notes = ActivityNoteSerializer(many=True, read_only=True)
     
@@ -53,7 +54,7 @@ class ActivitySerializer(serializers.ModelSerializer):
         model = Activity
         fields = [
             'id', 'user', 'user_email', 'user_name',
-            'parent', 'parent_title',
+            'parent', 'parent_title', 'parent_due_date',
             'title', 'description',
             'priority_id', 'priority_display',
             'status_id', 'status_display',
