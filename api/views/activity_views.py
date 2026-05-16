@@ -216,7 +216,7 @@ class ActivityViewSet(ModelViewSet):
             user=request.user,
             parent__isnull=False,
             due_date=query_date
-        ).exclude(status_id=Activity.Status.COMPLETADA)
+        ).exclude(status_id__in=[Activity.Status.COMPLETADA, Activity.Status.POSPUESTA])
 
         total = queryset.aggregate(total_hours=Sum("duration"))
 
